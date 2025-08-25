@@ -385,6 +385,150 @@
     </div>
 </div>
 
+<!-- View Description Modal -->
+<div class="modal fade" id="viewDescriptionModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-eye me-2"></i>Podgląd Opisu
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Tytuł:</label>
+                            <div id="viewTitle" class="border rounded p-2 bg-light"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Treść:</label>
+                            <div id="viewContent" class="border rounded p-3 bg-light" style="max-height: 400px; overflow-y: auto; white-space: pre-wrap; line-height: 1.6;"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Kategoria:</label>
+                            <div id="viewCategory" class="border rounded p-2 bg-light"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Tagi:</label>
+                            <div id="viewTags" class="border rounded p-2 bg-light"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Status:</label>
+                            <div id="viewStatus" class="border rounded p-2 bg-light"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Data utworzenia:</label>
+                            <div id="viewCreatedAt" class="border rounded p-2 bg-light"></div>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-success" id="toggleActiveBtn" onclick="toggleDescriptionActive()">
+                                <i class="fas fa-toggle-on me-2"></i>Aktywuj/Dezaktywuj
+                            </button>
+                            <button type="button" class="btn btn-danger" onclick="confirmDeleteDescription()">
+                                <i class="fas fa-trash me-2"></i>Usuń Opis
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zamknij</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle text-danger me-2"></i>Potwierdź Usunięcie
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3">Czy na pewno chcesz usunąć ten opis?</p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Uwaga:</strong> Tej operacji nie można cofnąć. Opis zostanie trwale usunięty.
+                </div>
+                <div id="deleteDescriptionInfo" class="border rounded p-2 bg-light">
+                    <!-- Description info will be populated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                <button type="button" class="btn btn-danger" onclick="executeDeleteDescription()">
+                    <i class="fas fa-trash me-2"></i>Usuń Trwale
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Generated Description Modal -->
+<div class="modal fade" id="viewGeneratedDescriptionModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-robot me-2"></i>Wygenerowany Opis
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Informacje wejściowe:</label>
+                            <div id="viewInputText" class="border rounded p-2 bg-light" style="max-height: 100px; overflow-y: auto;"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Wygenerowany opis:</label>
+                            <div id="viewGeneratedContent" class="border rounded p-3 bg-light" style="max-height: 400px; overflow-y: auto; white-space: pre-wrap; line-height: 1.6;"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Typ:</label>
+                            <div id="viewGeneratedType" class="border rounded p-2 bg-light"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Data wygenerowania:</label>
+                            <div id="viewGeneratedTimestamp" class="border rounded p-2 bg-light"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Tokeny użyte:</label>
+                            <div id="viewTokensUsed" class="border rounded p-2 bg-light"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Czas przetwarzania:</label>
+                            <div id="viewProcessingTime" class="border rounded p-2 bg-light"></div>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-primary" onclick="saveGeneratedDescription()">
+                                <i class="fas fa-save me-2"></i>Zapisz jako Przykład
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="copyToClipboard()">
+                                <i class="fas fa-copy me-2"></i>Kopiuj do Schowka
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zamknij</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Edit Prompt Modal -->
 <div class="modal fade" id="editPromptModal" tabindex="-1" aria-labelledby="editPromptModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">

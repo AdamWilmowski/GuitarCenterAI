@@ -3,6 +3,9 @@ let currentOriginalText = '';
 let currentDescriptionId = null;
 let currentSaveType = '';
 let currentSaveText = '';
+let currentViewDescriptionId = null;
+let currentDeleteDescriptionId = null;
+let currentGeneratedDescription = null;
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
@@ -372,6 +375,364 @@ async function submitSaveDescription() {
     }
 }
 
+// View description function
+async function viewDescription(descriptionId) {
+    try {
+        const response = await fetch(`/api/saved-descriptions/${descriptionId}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const text = await response.text();
+        if (!text) {
+            throw new Error('Empty response from server');
+        }
+        
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            console.error('Invalid JSON response:', text);
+            throw new Error('Invalid response format from server');
+        }
+        
+        if (data.success) {
+            const desc = data.description;
+            
+            // Populate the view modal
+            document.getElementById('viewTitle').textContent = desc.title;
+            document.getElementById('viewContent').textContent = desc.content;
+            document.getElementById('viewCategory').textContent = desc.category || 'Brak kategorii';
+            document.getElementById('viewTags').textContent = desc.tags || 'Brak tagów';
+            document.getElementById('viewStatus').textContent = desc.is_public ? 'Aktywny (publiczny)' : 'Nieaktywny (prywatny)';
+            document.getElementById('viewCreatedAt').textContent = new Date(desc.created_at).toLocaleString('pl-PL');
+            
+            // Update toggle button
+            const toggleBtn = document.getElementById('toggleActiveBtn');
+            toggleBtn.innerHTML = desc.is_public ? 
+                '<i class="fas fa-toggle-on me-2"></i>Dezaktywuj' : 
+                '<i class="fas fa-toggle-off me-2"></i>Aktywuj';
+            toggleBtn.className = desc.is_public ? 
+                'btn btn-warning' : 'btn btn-success';
+            
+            // Store the description ID for toggle/delete operations
+            currentViewDescriptionId = descriptionId;
+            
+            // Show the modal
+            const modal = new bootstrap.Modal(document.getElementById('viewDescriptionModal'));
+            modal.show();
+        } else {
+            showMessage('Błąd: ' + data.error, 'danger');
+        }
+    } catch (error) {
+        console.error('Error viewing description:', error);
+        showMessage('Błąd: ' + error.message, 'danger');
+    }
+}
+
+// Toggle description active status
+async function toggleDescriptionActive(descriptionId) {
+    if (!descriptionId) {
+        descriptionId = currentViewDescriptionId;
+    }
+    
+    if (!descriptionId) {
+        showMessage('Błąd: Brak ID opisu', 'danger');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/saved-descriptions/${descriptionId}/toggle-active`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        if (data.success) {
+            showMessage('Status opisu został zaktualizowany pomyślnie!', 'success');
+            
+            // Refresh the learning data to update the display
+            loadLearningData();
+            
+            // If we're in the view modal, update the status display
+            if (currentViewDescriptionId === descriptionId) {
+                document.getElementById('viewStatus').textContent = data.is_public ? 'Aktywny (publiczny)' : 'Nieaktywny (prywatny)';
+                const toggleBtn = document.getElementById('toggleActiveBtn');
+                toggleBtn.innerHTML = data.is_public ? 
+                    '<i class="fas fa-toggle-on me-2"></i>Dezaktywuj' : 
+                    '<i class="fas fa-toggle-off me-2"></i>Aktywuj';
+                toggleBtn.className = data.is_public ? 
+                    'btn btn-warning' : 'btn btn-success';
+            }
+        } else {
+            showMessage('Błąd: ' + data.error, 'danger');
+        }
+    } catch (error) {
+        console.error('Error toggling description active status:', error);
+        showMessage('Błąd: ' + error.message, 'danger');
+    }
+}
+
+// Confirm delete description function
+function confirmDeleteDescription(descriptionId) {
+    if (!descriptionId) {
+        descriptionId = currentViewDescriptionId;
+    }
+    
+    if (!descriptionId) {
+        showMessage('Błąd: Brak ID opisu', 'danger');
+        return;
+    }
+    
+    // Store the description ID for the actual deletion
+    currentDeleteDescriptionId = descriptionId;
+    
+    // Get description info to show in confirmation modal
+    fetch(`/api/saved-descriptions/${descriptionId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.text().then(text => {
+                if (!text) {
+                    throw new Error('Empty response from server');
+                }
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error('Invalid JSON response:', text);
+                    throw new Error('Invalid response format from server');
+                }
+            });
+        })
+        .then(data => {
+            if (data.success) {
+                const desc = data.description;
+                
+                // Populate the confirmation modal with description info
+                const infoDiv = document.getElementById('deleteDescriptionInfo');
+                infoDiv.innerHTML = `
+                    <div class="mb-2">
+                        <strong>Tytuł:</strong> ${desc.title}
+                    </div>
+                    <div class="mb-2">
+                        <strong>Kategoria:</strong> ${desc.category || 'Brak kategorii'}
+                    </div>
+                    <div class="mb-2">
+                        <strong>Typ:</strong> ${desc.type === 'guitar' ? 'Gitara' : 'Firma'}
+                    </div>
+                    <div>
+                        <strong>Treść:</strong> ${desc.content.substring(0, 100)}...
+                    </div>
+                `;
+                
+                // Show the confirmation modal
+                const modal = new bootstrap.Modal(document.getElementById('deleteConfirmationModal'));
+                modal.show();
+            } else {
+                // Try debug endpoint to get more information
+                console.log('Main endpoint failed, trying debug endpoint...');
+                return fetch(`/api/saved-descriptions/debug/${descriptionId}`)
+                    .then(response => response.json())
+                    .then(debugData => {
+                        console.log('Debug data:', debugData);
+                        showMessage('Błąd: ' + data.error + ' (Debug: ' + JSON.stringify(debugData) + ')', 'danger');
+                    })
+                    .catch(debugError => {
+                        showMessage('Błąd: ' + data.error + ' (Debug failed: ' + debugError.message + ')', 'danger');
+                    });
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching description for deletion:', error);
+            showMessage('Błąd: ' + error.message, 'danger');
+        });
+}
+
+// Execute delete description function
+async function executeDeleteDescription() {
+    const descriptionId = currentDeleteDescriptionId;
+    
+    if (!descriptionId) {
+        showMessage('Błąd: Brak ID opisu', 'danger');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/saved-descriptions/${descriptionId}`, {
+            method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        if (data.success) {
+            showMessage('Opis został usunięty pomyślnie!', 'success');
+            
+            // Close both modals
+            const deleteModal = bootstrap.Modal.getInstance(document.getElementById('deleteConfirmationModal'));
+            if (deleteModal) {
+                deleteModal.hide();
+            }
+            
+            const viewModal = bootstrap.Modal.getInstance(document.getElementById('viewDescriptionModal'));
+            if (viewModal) {
+                viewModal.hide();
+            }
+            
+            // Refresh the learning data to update the display
+            loadLearningData();
+        } else {
+            showMessage('Błąd: ' + data.error, 'danger');
+        }
+    } catch (error) {
+        console.error('Error deleting description:', error);
+        showMessage('Błąd: ' + error.message, 'danger');
+    }
+}
+
+// View generated description function
+async function viewGeneratedDescription(descriptionId) {
+    try {
+        const response = await fetch(`/api/descriptions/${descriptionId}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const text = await response.text();
+        if (!text) {
+            throw new Error('Empty response from server');
+        }
+        
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            console.error('Invalid JSON response:', text);
+            throw new Error('Invalid response format from server');
+        }
+        
+        if (data.success) {
+            const desc = data.description;
+            
+            // Store the current description for save functionality
+            currentGeneratedDescription = desc;
+            
+            // Populate the view modal
+            document.getElementById('viewInputText').textContent = desc.input_text;
+            document.getElementById('viewGeneratedContent').textContent = desc.generated_description;
+            document.getElementById('viewGeneratedType').textContent = desc.type === 'guitar' ? 'Gitara' : 'Firma';
+            document.getElementById('viewGeneratedTimestamp').textContent = new Date(desc.created_at).toLocaleString('pl-PL');
+            document.getElementById('viewTokensUsed').textContent = desc.tokens_used || 'Brak danych';
+            document.getElementById('viewProcessingTime').textContent = desc.processing_time ? 
+                `${desc.processing_time.toFixed(2)}s` : 'Brak danych';
+            
+            // Show the modal
+            const modal = new bootstrap.Modal(document.getElementById('viewGeneratedDescriptionModal'));
+            modal.show();
+        } else {
+            showMessage('Błąd: ' + data.error, 'danger');
+        }
+    } catch (error) {
+        console.error('Error viewing generated description:', error);
+        showMessage('Błąd: ' + error.message, 'danger');
+    }
+}
+
+// Save generated description as example
+async function saveGeneratedDescription() {
+    if (!currentGeneratedDescription) {
+        showMessage('Błąd: Brak danych do zapisania', 'danger');
+        return;
+    }
+    
+    // Store the current description data for the save modal
+    currentSaveType = currentGeneratedDescription.type;
+    currentSaveText = currentGeneratedDescription.generated_description;
+    
+    // Try to get AI suggestions for category and tags
+    let suggestedCategory = '';
+    let suggestedTags = '';
+    
+    try {
+        const response = await fetch('/api/saved-descriptions/suggest-metadata', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                content: currentGeneratedDescription.generated_description,
+                type: currentGeneratedDescription.type
+            })
+        });
+        const data = await response.json();
+        if (data.success) {
+            suggestedCategory = data.category;
+            suggestedTags = data.tags;
+        }
+    } catch (error) {
+        console.log('Could not get metadata suggestions:', error);
+    }
+    
+    // Populate the save modal with suggestions
+    document.getElementById('saveTitle').value = currentGeneratedDescription.input_text.substring(0, 50) + '...';
+    document.getElementById('saveCategory').value = suggestedCategory || '';
+    document.getElementById('saveTags').value = suggestedTags || '';
+    
+    // Show suggestion hints
+    const categorySuggestion = document.getElementById('categorySuggestion');
+    const tagsSuggestion = document.getElementById('tagsSuggestion');
+    
+    if (suggestedCategory) {
+        categorySuggestion.textContent = `Sugerowana kategoria: ${suggestedCategory}`;
+        categorySuggestion.className = 'form-text text-success';
+    } else {
+        categorySuggestion.textContent = 'Wprowadź kategorię (np. Elektryczna, Akustyczna, Firma)';
+        categorySuggestion.className = 'form-text text-muted';
+    }
+    
+    if (suggestedTags) {
+        tagsSuggestion.textContent = `Sugerowane tagi: ${suggestedTags}`;
+        tagsSuggestion.className = 'form-text text-success';
+    } else {
+        tagsSuggestion.textContent = 'Wprowadź tagi oddzielone przecinkami (opcjonalnie)';
+        tagsSuggestion.className = 'form-text text-muted';
+    }
+    
+    // Close the view modal and show the save modal
+    const viewModal = bootstrap.Modal.getInstance(document.getElementById('viewGeneratedDescriptionModal'));
+    if (viewModal) {
+        viewModal.hide();
+    }
+    
+    const saveModal = new bootstrap.Modal(document.getElementById('saveDescriptionModal'));
+    saveModal.show();
+}
+
+// Copy generated description to clipboard
+async function copyToClipboard() {
+    if (!currentGeneratedDescription) {
+        showMessage('Błąd: Brak danych do skopiowania', 'danger');
+        return;
+    }
+    
+    try {
+        await navigator.clipboard.writeText(currentGeneratedDescription.generated_description);
+        showMessage('Opis został skopiowany do schowka!', 'success');
+    } catch (error) {
+        console.error('Error copying to clipboard:', error);
+        showMessage('Błąd podczas kopiowania do schowka', 'danger');
+    }
+}
+
 // Enable correction function
 function enableCorrection(type) {
     const outputElement = document.getElementById(type + 'Output');
@@ -505,11 +866,34 @@ function displaySavedDescriptions(descriptions) {
     
     let html = '';
     descriptions.slice(-10).reverse().forEach(desc => {
+        const activeBadge = desc.is_public ? 
+            '<span class="badge bg-success ms-2">Aktywny</span>' : 
+            '<span class="badge bg-secondary ms-2">Nieaktywny</span>';
+        
+        const categoryBadge = desc.category ? 
+            `<span class="badge bg-info me-1">${desc.category}</span>` : '';
+        
         html += `
-            <div class="border-bottom pb-2 mb-2">
-                <small class="text-muted">${new Date(desc.timestamp).toLocaleString('pl-PL')} - ${desc.title}</small>
-                <div class="mt-1">
-                    ${desc.content.substring(0, 150)}...
+            <div class="border-bottom pb-2 mb-2" data-description-id="${desc.id}">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <small class="text-muted">${new Date(desc.timestamp).toLocaleString('pl-PL')} - ${desc.title} ${activeBadge}</small>
+                        <div class="mt-1">
+                            ${categoryBadge}
+                            ${desc.content.substring(0, 150)}...
+                        </div>
+                    </div>
+                    <div class="btn-group btn-group-sm ms-2">
+                        <button class="btn btn-outline-primary btn-sm" onclick="viewDescription(${desc.id})" title="Podgląd">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-outline-success btn-sm" onclick="toggleDescriptionActive(${desc.id})" title="${desc.is_public ? 'Dezaktywuj' : 'Aktywuj'}">
+                            <i class="fas fa-${desc.is_public ? 'toggle-on' : 'toggle-off'}"></i>
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" onclick="confirmDeleteDescription(${desc.id})" title="Usuń">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
@@ -529,11 +913,24 @@ function displayReturnedDescriptions(descriptions) {
     
     let html = '';
     descriptions.slice(-10).reverse().forEach(desc => {
+        const typeBadge = desc.type === 'guitar' ? 
+            '<span class="badge bg-primary me-1">Gitara</span>' : 
+            '<span class="badge bg-info me-1">Firma</span>';
+        
         html += `
-            <div class="border-bottom pb-2 mb-2">
-                <small class="text-muted">${new Date(desc.timestamp).toLocaleString('pl-PL')} - ${desc.type}</small>
-                <div class="mt-1">
-                    ${desc.generated_description.substring(0, 150)}...
+            <div class="border-bottom pb-2 mb-2" data-description-id="${desc.id}">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <small class="text-muted">${new Date(desc.timestamp).toLocaleString('pl-PL')} ${typeBadge}</small>
+                        <div class="mt-1">
+                            ${desc.generated_description.substring(0, 150)}...
+                        </div>
+                    </div>
+                    <div class="btn-group btn-group-sm ms-2">
+                        <button class="btn btn-outline-primary btn-sm" onclick="viewGeneratedDescription(${desc.id})" title="Podgląd">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         `;

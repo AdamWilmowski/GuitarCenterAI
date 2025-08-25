@@ -64,3 +64,39 @@ def generate_description():
             'success': False,
             'error': str(e)
         }), 500
+
+@descriptions_bp.route('/<int:description_id>', methods=['GET'])
+@login_required
+def get_generated_description(description_id):
+    """Get a single generated description"""
+    try:
+        description = ReturnedDescription.query.filter_by(
+            id=description_id, 
+            user_id=current_user.id
+        ).first()
+        
+        if not description:
+            return jsonify({
+                'success': False,
+                'error': 'Description not found'
+            }), 404
+        
+        return jsonify({
+            'success': True,
+            'description': {
+                'id': description.id,
+                'input_text': description.input_text,
+                'generated_description': description.generated_description,
+                'type': description.description_type,
+                'created_at': description.created_at.isoformat(),
+                'tokens_used': description.tokens_used,
+                'model_version': description.model_version,
+                'processing_time': description.processing_time
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
