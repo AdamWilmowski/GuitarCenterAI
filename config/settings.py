@@ -8,6 +8,10 @@ class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'your-secret-key-change-this')
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
     
+    # Database settings
+    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///guitar_ai.db')
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    
     # File paths
     LEARNING_DATA_FILE = 'learning_data.json'
     

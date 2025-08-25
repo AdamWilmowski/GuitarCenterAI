@@ -1,5 +1,6 @@
 let currentType = '';
 let currentOriginalText = '';
+let currentDescriptionId = null;
 
 // Load learning data when learning tab is shown
 document.addEventListener('DOMContentLoaded', function() {
@@ -24,7 +25,7 @@ function generateDescription(type) {
     
     showLoading(true);
     
-    fetch('/generate_description', {
+    fetch('/api/descriptions/generate', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -42,6 +43,7 @@ function generateDescription(type) {
             actionsElement.style.display = 'block';
             currentType = type;
             currentOriginalText = data.description;
+            currentDescriptionId = data.description_id;
         } else {
             outputElement.innerHTML = '<p class="text-danger">Error: ' + data.error + '</p>';
         }
@@ -52,25 +54,36 @@ function generateDescription(type) {
     });
 }
 
-// Save as example function
-function saveAsExample(type) {
+// Save description function
+function saveDescription(type) {
     const outputElement = document.getElementById(type + 'Output');
     const text = outputElement.innerText;
     
-    fetch('/add_example', {
+    // Prompt for title and category
+    const title = prompt('Enter a title for this description:');
+    if (!title) return;
+    
+    const category = prompt('Enter a category (optional):');
+    const tags = prompt('Enter tags separated by commas (optional):').split(',').map(t => t.trim()).filter(t => t);
+    
+    fetch('/api/saved-descriptions/save', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+            title: title,
+            content: text,
             type: type,
-            example_text: text
+            category: category || '',
+            tags: tags,
+            is_public: false
         })
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Example saved successfully!');
+            alert('Description saved successfully!');
         } else {
             alert('Error: ' + data.error);
         }
@@ -96,8 +109,10 @@ function enableCorrection(type) {
 // Submit correction function
 function submitCorrection() {
     const correctedText = document.getElementById('correctedText').value;
+    const correctionType = document.getElementById('correctionType') ? document.getElementById('correctionType').value : 'general';
+    const notes = document.getElementById('correctionNotes') ? document.getElementById('correctionNotes').value : '';
     
-    fetch('/submit_correction', {
+    fetch('/api/corrections/submit', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -105,7 +120,10 @@ function submitCorrection() {
         body: JSON.stringify({
             type: currentType,
             original_text: currentOriginalText,
-            corrected_text: correctedText
+            corrected_text: correctedText,
+            description_id: currentDescriptionId,
+            correction_type: correctionType,
+            notes: notes
         })
     })
     .then(response => response.json())
@@ -128,11 +146,16 @@ function submitCorrection() {
 
 // Load learning data function
 function loadLearningData() {
-    fetch('/learning_data')
+    fetch('/api/learning-data/dashboard')
     .then(response => response.json())
     .then(data => {
-        displayCorrections(data.corrections);
-        displayExamples(data.examples);
+        if (data.success) {
+            displayCorrections(data.corrections);
+            displaySavedDescriptions(data.saved_descriptions);
+            displayReturnedDescriptions(data.returned_descriptions);
+        } else {
+            console.error('Error loading learning data:', data.error);
+        }
     })
     .catch(error => {
         console.error('Error loading learning data:', error);
@@ -148,7 +171,7 @@ function displayCorrections(corrections) {
     }
     
     let html = '';
-    corrections.slice(-10).reverse().forEach(correction => {
+    corrections.forEach(correction => {
         html += `
             <div class="border-bottom pb-2 mb-2">
                 <small class="text-muted">${new Date(correction.timestamp).toLocaleString()} - ${correction.type}</small>
@@ -158,28 +181,64 @@ function displayCorrections(corrections) {
                 <div class="mt-1">
                     <strong>Corrected:</strong> <span class="text-success">${correction.corrected.substring(0, 100)}...</span>
                 </div>
+                ${correction.notes ? `<div class="mt-1"><small class="text-info">Notes: ${correction.notes}</small></div>` : ''}
             </div>
         `;
     });
     container.innerHTML = html;
 }
 
-// Display examples
-function displayExamples(examples) {
-    const container = document.getElementById('examplesList');
-    if (examples.length === 0) {
-        container.innerHTML = '<p class="text-muted">No examples yet...</p>';
+// Display saved descriptions
+function displaySavedDescriptions(savedDescriptions) {
+    const container = document.getElementById('savedDescriptionsList');
+    if (!container) return;
+    
+    if (savedDescriptions.length === 0) {
+        container.innerHTML = '<p class="text-muted">No saved descriptions yet...</p>';
         return;
     }
     
     let html = '';
-    examples.slice(-10).reverse().forEach(example => {
+    savedDescriptions.forEach(desc => {
         html += `
             <div class="border-bottom pb-2 mb-2">
-                <small class="text-muted">${new Date(example.timestamp).toLocaleString()} - ${example.type}</small>
+                <small class="text-muted">${new Date(desc.timestamp).toLocaleString()} - ${desc.type}</small>
                 <div class="mt-1">
-                    ${example.text.substring(0, 150)}...
+                    <strong>${desc.title}</strong>
                 </div>
+                <div class="mt-1">
+                    ${desc.content.substring(0, 150)}...
+                </div>
+                ${desc.category ? `<div class="mt-1"><small class="text-primary">Category: ${desc.category}</small></div>` : ''}
+                ${desc.tags.length > 0 ? `<div class="mt-1"><small class="text-secondary">Tags: ${desc.tags.join(', ')}</small></div>` : ''}
+            </div>
+        `;
+    });
+    container.innerHTML = html;
+}
+
+// Display returned descriptions
+function displayReturnedDescriptions(returnedDescriptions) {
+    const container = document.getElementById('returnedDescriptionsList');
+    if (!container) return;
+    
+    if (returnedDescriptions.length === 0) {
+        container.innerHTML = '<p class="text-muted">No generated descriptions yet...</p>';
+        return;
+    }
+    
+    let html = '';
+    returnedDescriptions.forEach(desc => {
+        html += `
+            <div class="border-bottom pb-2 mb-2">
+                <small class="text-muted">${new Date(desc.timestamp).toLocaleString()} - ${desc.type}</small>
+                <div class="mt-1">
+                    <strong>Input:</strong> <span class="text-muted">${desc.input_text.substring(0, 100)}...</span>
+                </div>
+                <div class="mt-1">
+                    <strong>Generated:</strong> <span class="text-success">${desc.generated_description.substring(0, 150)}...</span>
+                </div>
+                ${desc.processing_time ? `<div class="mt-1"><small class="text-info">Processing time: ${desc.processing_time.toFixed(2)}s</small></div>` : ''}
             </div>
         `;
     });

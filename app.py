@@ -13,14 +13,26 @@ load_dotenv()
 from flask import Flask
 from flask_login import LoginManager
 from config.settings import Config
-from models.user import get_user
+from models.database import db, init_db
+from models.user import get_user_by_id
 from routes.auth import auth_bp
 from routes.main import main_bp
+from routes.api import (
+    descriptions_bp,
+    saved_descriptions_bp,
+    corrections_bp,
+    learning_data_bp
+)
 
 def create_app():
     """Application factory pattern"""
     app = Flask(__name__)
     app.config['SECRET_KEY'] = Config.SECRET_KEY
+    app.config['SQLALCHEMY_DATABASE_URI'] = Config.SQLALCHEMY_DATABASE_URI
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = Config.SQLALCHEMY_TRACK_MODIFICATIONS
+    
+    # Initialize database
+    init_db(app)
     
     # Initialize Flask-Login
     login_manager = LoginManager()
@@ -28,12 +40,19 @@ def create_app():
     login_manager.login_view = 'auth.login'
     
     @login_manager.user_loader
-    def load_user(username):
-        return get_user(username)
+    def load_user(user_id):
+        """Load user by ID"""
+        return get_user_by_id(int(user_id))
     
     # Register blueprints
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
+    
+    # Register API blueprints
+    app.register_blueprint(descriptions_bp)
+    app.register_blueprint(saved_descriptions_bp)
+    app.register_blueprint(corrections_bp)
+    app.register_blueprint(learning_data_bp)
     
     return app
 

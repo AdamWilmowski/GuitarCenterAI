@@ -50,3 +50,10 @@ Thumbs.db
 # Application specific
 learning_data.json
 *.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+guitar_ai.db
+instance/

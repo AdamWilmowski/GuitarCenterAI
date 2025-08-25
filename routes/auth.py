@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required
-from models.user import get_user, verify_user
+from models.user import get_user_by_username, verify_user
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -12,7 +12,7 @@ def login():
         password = request.form['password']
         
         if verify_user(username, password):
-            user = get_user(username)
+            user = get_user_by_username(username)
             login_user(user)
             return redirect(url_for('main.index'))
         else:
