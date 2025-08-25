@@ -219,6 +219,8 @@ function generateDescription(type) {
     .then(data => {
         showLoading(false);
         if (data.success) {
+            console.log('Full description received:', data.description);
+            console.log('Description length:', data.description.length);
             outputElement.innerHTML = data.description.replace(/\n/g, '<br>');
             actionsElement.style.display = 'block';
             currentType = type;
@@ -243,7 +245,9 @@ function saveDescription(type) {
         return;
     }
     
-    const text = outputElement.innerText;
+    const text = outputElement.innerText || outputElement.textContent;
+    console.log('Saving description, length:', text.length);
+    console.log('Full text to save:', text);
     
     const title = prompt('Podaj tytuł dla tego opisu:');
     if (!title) return;
@@ -293,7 +297,8 @@ function enableCorrection(type) {
         return;
     }
     
-    const originalText = outputElement.innerText;
+    const originalText = outputElement.innerText || outputElement.textContent;
+    console.log('Correction text length:', originalText.length);
     
     const originalTextDiv = document.getElementById('originalText');
     const correctedTextArea = document.getElementById('correctedText');

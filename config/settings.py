@@ -17,7 +17,7 @@ class Config:
     
     # OpenAI settings
     OPENAI_MODEL = "gpt-3.5-turbo"
-    OPENAI_MAX_TOKENS = 500
+    OPENAI_MAX_TOKENS = 1500
     OPENAI_TEMPERATURE = 0.7
     
     # Flask settings
