@@ -6,6 +6,7 @@ let currentSaveText = '';
 let currentViewDescriptionId = null;
 let currentDeleteDescriptionId = null;
 let currentGeneratedDescription = null;
+let currentCorrectionSource = null;
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
@@ -733,6 +734,98 @@ async function copyToClipboard() {
     }
 }
 
+// Correct generated description function
+function correctGeneratedDescription() {
+    if (!currentGeneratedDescription) {
+        showMessage('Błąd: Brak danych do poprawienia', 'danger');
+        return;
+    }
+    
+    // Set the correction context for generated descriptions
+    currentType = currentGeneratedDescription.type;
+    currentOriginalText = currentGeneratedDescription.generated_description;
+    currentDescriptionId = currentGeneratedDescription.id;
+    currentCorrectionSource = 'generated'; // Flag to indicate this is from generated description
+    
+    // Populate the correction modal
+    const originalTextDiv = document.getElementById('originalText');
+    const correctedTextArea = document.getElementById('correctedText');
+    const correctionNotesArea = document.getElementById('correctionNotes');
+    
+    if (originalTextDiv && correctedTextArea) {
+        originalTextDiv.innerText = currentOriginalText;
+        correctedTextArea.value = currentOriginalText;
+        correctionNotesArea.value = ''; // Clear any previous notes
+        
+        // Close the view modal and show the correction modal
+        const viewModal = bootstrap.Modal.getInstance(document.getElementById('viewGeneratedDescriptionModal'));
+        if (viewModal) {
+            viewModal.hide();
+        }
+        
+        const modal = new bootstrap.Modal(document.getElementById('correctionModal'));
+        modal.show();
+    } else {
+        console.error('Modal elements not found');
+        showMessage('Błąd: Nie można otworzyć modalu poprawki', 'danger');
+    }
+}
+
+// Correct generated description from list function
+async function correctGeneratedDescriptionFromList(descriptionId) {
+    try {
+        const response = await fetch(`/api/descriptions/${descriptionId}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const text = await response.text();
+        if (!text) {
+            throw new Error('Empty response from server');
+        }
+        
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            console.error('Invalid JSON response:', text);
+            throw new Error('Invalid response format from server');
+        }
+        
+        if (data.success) {
+            const desc = data.description;
+            
+            // Set the correction context for generated descriptions
+            currentType = desc.type;
+            currentOriginalText = desc.generated_description;
+            currentDescriptionId = desc.id;
+            currentCorrectionSource = 'generated'; // Flag to indicate this is from generated description
+            
+            // Populate the correction modal
+            const originalTextDiv = document.getElementById('originalText');
+            const correctedTextArea = document.getElementById('correctedText');
+            const correctionNotesArea = document.getElementById('correctionNotes');
+            
+            if (originalTextDiv && correctedTextArea) {
+                originalTextDiv.innerText = currentOriginalText;
+                correctedTextArea.value = currentOriginalText;
+                correctionNotesArea.value = ''; // Clear any previous notes
+                
+                const modal = new bootstrap.Modal(document.getElementById('correctionModal'));
+                modal.show();
+            } else {
+                console.error('Modal elements not found');
+                showMessage('Błąd: Nie można otworzyć modalu poprawki', 'danger');
+            }
+        } else {
+            showMessage('Błąd: ' + data.error, 'danger');
+        }
+    } catch (error) {
+        console.error('Error fetching description for correction:', error);
+        showMessage('Błąd: ' + error.message, 'danger');
+    }
+}
+
 // Enable correction function
 function enableCorrection(type) {
     const outputElement = document.getElementById(type + 'Output');
@@ -744,12 +837,19 @@ function enableCorrection(type) {
     const originalText = outputElement.innerText || outputElement.textContent;
     console.log('Correction text length:', originalText.length);
     
+    // Set the correction context for current generation
+    currentType = type;
+    currentOriginalText = originalText;
+    currentCorrectionSource = 'current'; // Flag to indicate this is from current generation
+    
     const originalTextDiv = document.getElementById('originalText');
     const correctedTextArea = document.getElementById('correctedText');
+    const correctionNotesArea = document.getElementById('correctionNotes');
     
     if (originalTextDiv && correctedTextArea) {
         originalTextDiv.innerText = originalText;
         correctedTextArea.value = originalText;
+        correctionNotesArea.value = ''; // Clear any previous notes
         
         const modal = new bootstrap.Modal(document.getElementById('correctionModal'));
         modal.show();
@@ -759,53 +859,66 @@ function enableCorrection(type) {
 }
 
 // Submit correction function
-function submitCorrection() {
+async function submitCorrection() {
     const correctedTextArea = document.getElementById('correctedText');
+    const correctionNotesArea = document.getElementById('correctionNotes');
+    
     if (!correctedTextArea) {
         console.error('Corrected text area not found');
         return;
     }
     
     const correctedText = correctedTextArea.value;
+    const correctionNotes = correctionNotesArea ? correctionNotesArea.value : '';
     
     if (!correctedText.trim()) {
-        alert('Proszę wprowadzić poprawiony tekst.');
+        showMessage('Proszę wprowadzić poprawiony tekst.', 'warning');
         return;
     }
     
-    fetch('/api/corrections/submit', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            original_text: currentOriginalText,
-            corrected_text: correctedText,
-            type: currentType,
-            description_id: currentDescriptionId
-        })
-    })
-    .then(response => {
+    try {
+        const response = await fetch('/api/corrections/submit', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                original_text: currentOriginalText,
+                corrected_text: correctedText,
+                type: currentType,
+                description_id: currentDescriptionId,
+                notes: correctionNotes
+            })
+        });
+        
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        return response.json();
-    })
-    .then(data => {
+        
+        const data = await response.json();
         if (data.success) {
-            alert('Poprawka została zatwierdzona pomyślnie!');
+            showMessage('Poprawka została zatwierdzona pomyślnie!', 'success');
+            
+            // Close the correction modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('correctionModal'));
             if (modal) {
                 modal.hide();
             }
+            
+            // If this was from a generated description, refresh the learning data
+            if (currentCorrectionSource === 'generated') {
+                loadLearningData();
+            }
+            
+            // Reset correction context
+            currentCorrectionSource = null;
         } else {
-            alert('Błąd: ' + data.error);
+            showMessage('Błąd: ' + data.error, 'danger');
         }
-    })
-    .catch(error => {
+    } catch (error) {
         console.error('Error submitting correction:', error);
-        alert('Błąd: ' + error.message);
-    });
+        showMessage('Błąd: ' + error.message, 'danger');
+    }
 }
 
 // Load learning data function
@@ -929,6 +1042,9 @@ function displayReturnedDescriptions(descriptions) {
                     <div class="btn-group btn-group-sm ms-2">
                         <button class="btn btn-outline-primary btn-sm" onclick="viewGeneratedDescription(${desc.id})" title="Podgląd">
                             <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-outline-warning btn-sm" onclick="correctGeneratedDescriptionFromList(${desc.id})" title="Popraw">
+                            <i class="fas fa-edit"></i>
                         </button>
                     </div>
                 </div>

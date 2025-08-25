@@ -315,7 +315,9 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Popraw Opis</h5>
+                <h5 class="modal-title">
+                    <i class="fas fa-edit me-2"></i>Popraw Opis
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -326,6 +328,10 @@
                 <div class="mb-3">
                     <label for="correctedText" class="form-label">Poprawiony Opis:</label>
                     <textarea class="form-control" id="correctedText" rows="12" style="white-space: pre-wrap;"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="correctionNotes" class="form-label">Uwagi do poprawki (opcjonalnie):</label>
+                    <textarea class="form-control" id="correctionNotes" rows="3" placeholder="Opisz, co zostało poprawione (np. gramatyka, styl, fakty...)" style="white-space: pre-wrap;"></textarea>
                 </div>
             </div>
             <div class="modal-footer">
@@ -514,6 +520,9 @@
                         <div class="d-grid gap-2">
                             <button type="button" class="btn btn-primary" onclick="saveGeneratedDescription()">
                                 <i class="fas fa-save me-2"></i>Zapisz jako Przykład
+                            </button>
+                            <button type="button" class="btn btn-warning" onclick="correctGeneratedDescription()">
+                                <i class="fas fa-edit me-2"></i>Popraw Opis
                             </button>
                             <button type="button" class="btn btn-outline-secondary" onclick="copyToClipboard()">
                                 <i class="fas fa-copy me-2"></i>Kopiuj do Schowka
