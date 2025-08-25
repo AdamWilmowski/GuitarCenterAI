@@ -45,7 +45,7 @@ def get_learning_data():
                     'content': s.content,
                     'type': s.description_type,
                     'category': s.category,
-                    'tags': json.loads(s.tags) if s.tags else [],
+                    'tags': s.tags if s.tags else '',
                     'timestamp': s.created_at.isoformat(),
                     'is_public': s.is_public
                 } for s in saved_descriptions

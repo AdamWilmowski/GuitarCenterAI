@@ -20,6 +20,8 @@ class User(UserMixin, db.Model):
     # Relationships
     saved_descriptions = db.relationship('SavedDescription', backref='user', lazy=True)
     corrections = db.relationship('ModelCorrection', backref='user', lazy=True)
+    returned_descriptions = db.relationship('ReturnedDescription', backref='user', lazy=True)
+    adjustments = db.relationship('ModelAdjustment', backref='user', lazy=True)
     
     def get_id(self):
         """Return the user ID as a string for Flask-Login"""

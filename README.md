@@ -1,289 +1,201 @@
 # Guitar AI Description Generator
 
-A Flask-based web application that generates detailed descriptions of guitars and guitar companies using OpenAI's GPT-3.5. The app includes a learning system that improves over time based on user corrections and examples, with a robust SQLite database backend.
+Aplikacja Flask do generowania opisów gitar i firm produkujących gitary przy użyciu OpenAI GPT. Aplikacja generuje opisy w języku polskim z pełnym wsparciem dla polskich znaków (UTF-8).
 
-## Features
+## Funkcje
 
-- **Guitar Descriptions**: Generate comprehensive descriptions of guitars based on input specifications
-- **Company Descriptions**: Create detailed company profiles for guitar manufacturers
-- **AI Learning**: The system learns from corrections and examples to improve future descriptions
-- **Database Storage**: SQLite database for persistent storage of all data
-- **User Management**: Multi-user system with role-based access
-- **Clean Interface**: Modern, responsive web interface
-- **Correction System**: Users can correct AI-generated descriptions and the system learns from these corrections
-- **Modular Architecture**: Clean, maintainable code structure with separate modules for different concerns
-- **RESTful API**: Well-organized API endpoints for all functionality
+- 🤖 **Generowanie opisów AI** - Tworzenie szczegółowych opisów gitar i firm w języku polskim
+- 📝 **System poprawek** - Możliwość poprawiania wygenerowanych opisów przez AI
+- 💾 **Zapisywanie opisów** - Przechowywanie opisów w bazie danych SQLite
+- 🧠 **Uczenie się** - AI uczy się na podstawie poprawek użytkowników
+- 🔐 **Uwierzytelnianie** - Ograniczony dostęp dla 2-3 użytkowników
+- 🌍 **Wsparcie UTF-8** - Pełne wsparcie dla polskich znaków i terminologii muzycznej
 
-## Database Schema
+## Technologie
 
-The application uses SQLite with the following tables:
+- **Backend**: Flask, SQLAlchemy, OpenAI GPT-3.5-turbo
+- **Frontend**: Bootstrap 5, JavaScript
+- **Baza danych**: SQLite z kodowaniem UTF-8
+- **Uwierzytelnianie**: Flask-Login
+- **Język**: Python 3.8+
 
-- **users**: User accounts and authentication
-- **saved_descriptions**: Reference descriptions saved by users
-- **returned_descriptions**: AI-generated descriptions with metadata
-- **model_corrections**: Corrections made to improve the AI model
-- **model_adjustments**: Model configuration and preferences
-
-## API Endpoints
-
-### Descriptions
-- `POST /api/descriptions/generate` - Generate AI descriptions
-
-### Saved Descriptions
-- `POST /api/saved-descriptions/save` - Save a description
-- `GET /api/saved-descriptions/list` - List user's saved descriptions
-- `DELETE /api/saved-descriptions/<id>` - Delete a saved description
-
-### Corrections
-- `POST /api/corrections/submit` - Submit a correction
-- `GET /api/corrections/list` - List user's corrections
-- `POST /api/corrections/<id>/apply` - Mark correction as applied
-
-### Learning Data
-- `GET /api/learning-data/dashboard` - Get dashboard data
-- `GET /api/learning-data/stats` - Get user statistics
-
-## Setup Instructions
-
-### Prerequisites
-
-- Python 3.7 or higher
-- OpenAI API key
-
-### Installation
-
-1. **Clone or download the project files**
-
-2. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Set up environment variables**:
-   - Copy `env.example` to `.env`
-   - Edit `.env` and add your configuration:
-   ```bash
-   cp env.example .env
-   ```
-   
-   Update the `.env` file with your actual values:
-   ```
-   SECRET_KEY=your-secret-key-change-this-in-production
-   OPENAI_API_KEY=your-actual-openai-api-key
-   DATABASE_URL=sqlite:///guitar_ai.db
-   ```
-
-4. **Initialize the database**:
-   ```bash
-   python manage_db.py init
-   ```
-
-5. **Run the application**:
-   ```bash
-   python run.py
-   ```
-   or
-   ```bash
-   python app.py
-   ```
-
-6. **Access the application**:
-   - Open your browser and go to `http://localhost:5000`
-   - Login with username: `admin` and password: `admin123`
-
-## Usage
-
-### Generating Descriptions
-
-1. **Guitar Descriptions**:
-   - Go to the "Guitar Descriptions" tab
-   - Enter guitar details (model, specifications, features, etc.)
-   - Click "Generate Description"
-   - The AI will create a comprehensive description
-
-2. **Company Descriptions**:
-   - Go to the "Company Descriptions" tab
-   - Enter company information (history, products, achievements, etc.)
-   - Click "Generate Description"
-   - The AI will create a detailed company profile
-
-### Learning Features
-
-1. **Saving Descriptions**:
-   - After generating a description, click "Save Description"
-   - Add a title, category, and tags
-   - This helps the AI understand your preferred style
-
-2. **Correcting Descriptions**:
-   - Click "Correct Description" on any generated text
-   - Edit the description in the modal
-   - Submit the correction
-   - The AI will consider this correction in future generations
-
-3. **Viewing Learning Data**:
-   - Go to the "Learning Data" tab
-   - View recent corrections, saved descriptions, and generated descriptions
-   - This shows how the AI is learning from your input
-
-## Database Management
-
-### Database Commands
-
-```bash
-# Initialize database
-python manage_db.py init
-
-# Show database statistics
-python manage_db.py stats
-
-# Create a new user
-python manage_db.py user
-
-# Reset database (WARNING: deletes all data)
-python manage_db.py reset
-```
-
-### Database Location
-
-The SQLite database is stored in:
-- **Development**: `instance/guitar_ai.db`
-- **Production**: Configure via `DATABASE_URL` environment variable
-
-## File Structure
+## Struktura projektu
 
 ```
 GuitarAIAPI/
-├── app.py                 # Main Flask application (factory pattern)
-├── run.py                 # Startup script with environment checks
-├── manage_db.py           # Database management script
-├── requirements.txt       # Python dependencies
-├── env.example           # Environment variables template
-├── instance/             # Instance-specific files (database)
+├── app.py                 # Główna aplikacja Flask
 ├── config/
-│   ├── __init__.py
-│   └── settings.py       # Application configuration
+│   └── settings.py        # Konfiguracja aplikacji
 ├── models/
-│   ├── __init__.py
-│   ├── database.py       # Database configuration
-│   ├── user.py           # User model and authentication
-│   └── descriptions.py   # Description models
+│   ├── database.py        # Inicjalizacja bazy danych
+│   ├── user.py           # Model użytkownika
+│   └── descriptions.py   # Modele opisów i poprawek
 ├── routes/
-│   ├── __init__.py
-│   ├── auth.py           # Authentication routes
-│   ├── main.py           # Main page routes
-│   └── api/              # API routes
-│       ├── __init__.py
-│       ├── index.py      # API routes index
-│       ├── descriptions.py      # Description generation
-│       ├── saved_descriptions.py # Saved descriptions management
-│       ├── corrections.py       # Model corrections
-│       └── learning_data.py     # Learning data retrieval
+│   ├── auth.py           # Uwierzytelnianie
+│   ├── main.py           # Główne strony
+│   └── api/              # Endpointy API
+│       ├── descriptions.py
+│       ├── saved_descriptions.py
+│       ├── corrections.py
+│       └── learning_data.py
 ├── utils/
-│   ├── __init__.py
-│   └── ai_service.py     # OpenAI API service
-├── templates/
-│   ├── base.html         # Base template
-│   ├── login.html        # Login page
-│   └── index.html        # Main application interface
-└── static/
-    ├── css/
-    │   └── style.css     # Custom styles
-    └── js/
-        └── app.js        # JavaScript functionality
+│   └── ai_service.py     # Serwis AI
+├── templates/            # Szablony HTML
+├── static/              # Pliki statyczne
+└── requirements.txt     # Zależności Python
 ```
 
-## Architecture
+## Instalacja
 
-The application follows a modular architecture:
-
-- **Config**: Centralized configuration management
-- **Models**: SQLAlchemy database models and business logic
-- **Routes**: HTTP route handlers organized by feature
-  - **Auth**: Authentication and user management
-  - **Main**: Page rendering
-  - **API**: RESTful API endpoints organized by functionality
-- **Utils**: Utility functions and services
-- **Templates**: HTML templates
-- **Static**: CSS, JavaScript, and other static assets
-
-### Key Components
-
-- **Database Models**: SQLAlchemy ORM for data persistence
-- **AIService**: Handles all OpenAI API interactions
-- **User Management**: Secure authentication and authorization
-- **Learning System**: Database-driven AI improvement
-- **API Routes**: Well-organized RESTful endpoints
-- **Blueprints**: Organized route handling for different features
-
-## Configuration
-
-### Adding Users
-
-Use the database management script:
+1. **Sklonuj repozytorium**
 ```bash
-python manage_db.py user
+git clone <repository-url>
+cd GuitarAIAPI
 ```
 
-Or programmatically:
-```python
-from models.user import create_user
-create_user('username', 'email@example.com', 'password', 'role')
+2. **Utwórz środowisko wirtualne**
+```bash
+python3 -m venv venv
+source venv/bin/activate  # Linux/Mac
+# lub
+venv\Scripts\activate     # Windows
 ```
 
-### OpenAI Configuration
-
-The app uses OpenAI's GPT-3.5-turbo model. You can modify the model or parameters in `config/settings.py`:
-
-```python
-OPENAI_MODEL = "gpt-3.5-turbo"
-OPENAI_MAX_TOKENS = 500
-OPENAI_TEMPERATURE = 0.7
+3. **Zainstaluj zależności**
+```bash
+pip install -r requirements.txt
 ```
 
-### Database Configuration
-
-Configure the database connection in `config/settings.py`:
-
-```python
-SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///guitar_ai.db')
+4. **Skonfiguruj zmienne środowiskowe**
+```bash
+cp .env.example .env
+# Edytuj .env i dodaj swój klucz OpenAI API
 ```
 
-## Security Notes
+5. **Uruchom aplikację**
+```bash
+python app.py
+```
 
-- Change the default admin password in production
-- Use a strong SECRET_KEY
-- The database file is automatically excluded from version control
-- User passwords are hashed using Werkzeug's security functions
-- The app is designed for limited access (2-3 users)
+## Konfiguracja
 
-## Troubleshooting
+### Zmienne środowiskowe (.env)
 
-### Common Issues
+```env
+SECRET_KEY=your-secret-key-change-this
+OPENAI_API_KEY=your-openai-api-key-here
+DATABASE_URL=sqlite:///guitar_ai.db
+```
 
-1. **OpenAI API Error**: Make sure your API key is correct and has sufficient credits
-2. **Import Errors**: Ensure all dependencies are installed with `pip install -r requirements.txt`
-3. **Database Errors**: Run `python manage_db.py init` to initialize the database
-4. **Port Already in Use**: Change the port in `config/settings.py` or stop other services using port 5000
+### Baza danych
 
-### Logs
+Aplikacja automatycznie tworzy bazę danych SQLite z następującymi tabelami:
 
-The application will show error messages in the console. Check the browser's developer console for JavaScript errors.
+- **users** - Użytkownicy systemu
+- **saved_descriptions** - Zapisane opisy referencyjne
+- **returned_descriptions** - Wygenerowane przez AI opisy
+- **model_corrections** - Poprawki do modelu AI
+- **model_adjustments** - Dostosowania modelu
 
-## Future Enhancements
+### Zarządzanie bazą danych
 
-- PostgreSQL/MySQL support for production
-- User management interface
-- Export functionality for descriptions
-- Image upload and analysis
-- More detailed guitar specifications
-- Historical data tracking
-- API rate limiting
-- Caching for better performance
-- Database migrations
-- Backup and restore functionality
-- API documentation with Swagger/OpenAPI
-- WebSocket support for real-time updates
+```bash
+# Inicjalizacja bazy danych
+python manage_db.py init
 
-## License
+# Reset bazy danych
+python manage_db.py reset
 
-This project is for educational and personal use. Please respect OpenAI's terms of service when using their API.
+# Statystyki bazy danych
+python manage_db.py stats
+
+# Utworzenie nowego użytkownika
+python manage_db.py create-user
+```
+
+## API Endpointy
+
+### Generowanie opisów
+- `POST /api/descriptions/generate` - Generowanie opisu gitary/firmy
+
+### Zapisane opisy
+- `POST /api/saved-descriptions/save` - Zapisywanie opisu
+- `GET /api/saved-descriptions/list` - Lista zapisanych opisów
+- `DELETE /api/saved-descriptions/<id>` - Usuwanie opisu
+
+### Poprawki
+- `POST /api/corrections/submit` - Zgłaszanie poprawki
+- `GET /api/corrections/list` - Lista poprawek
+- `POST /api/corrections/<id>/apply` - Zastosowanie poprawki
+
+### Dane uczenia
+- `GET /api/learning-data/dashboard` - Dane do dashboardu
+- `GET /api/learning-data/user-stats` - Statystyki użytkownika
+
+## Wsparcie dla języka polskiego
+
+Aplikacja jest w pełni przystosowana do języka polskiego:
+
+- **Generowanie opisów w języku polskim** z polską terminologią muzyczną
+- **Przykłady opisów** w języku polskim
+- **Interfejs użytkownika** w języku polskim
+- **Kodowanie UTF-8** dla wszystkich polskich znaków
+- **Polskie daty i formaty** w interfejsie
+
+## Użycie
+
+1. **Zaloguj się** używając domyślnych danych:
+   - Użytkownik: `admin`
+   - Hasło: `admin123`
+
+2. **Generuj opisy gitar**:
+   - Wprowadź informacje o gitarze (model, specyfikacje, cechy)
+   - Kliknij "Generuj Opis"
+   - AI wygeneruje szczegółowy opis w języku polskim
+
+3. **Generuj opisy firm**:
+   - Wprowadź informacje o firmie (historia, produkty, osiągnięcia)
+   - Kliknij "Generuj Opis"
+   - AI wygeneruje opis firmy w języku polskim
+
+4. **Poprawiaj opisy**:
+   - Kliknij "Popraw Opis" po wygenerowaniu
+   - Wprowadź poprawki w języku polskim
+   - AI nauczy się na podstawie poprawek
+
+5. **Zapisuj opisy**:
+   - Kliknij "Zapisz Opis" aby zachować opis
+   - Dodaj tytuł, kategorię i tagi
+   - Opisy będą dostępne jako przykłady dla AI
+
+## Bezpieczeństwo
+
+- Ograniczony dostęp dla 2-3 użytkowników
+- Uwierzytelnianie przez Flask-Login
+- Bezpieczne przechowywanie haseł (hashowanie)
+- Walidacja danych wejściowych
+
+## Rozwój
+
+### Dodawanie nowych funkcji
+
+1. Utwórz nowy blueprint w `routes/api/`
+2. Dodaj modele do `models/descriptions.py` jeśli potrzebne
+3. Zaktualizuj `utils/ai_service.py` dla nowej logiki AI
+4. Dodaj endpointy do `app.py`
+
+### Testowanie
+
+```bash
+# Uruchom w trybie debug
+export FLASK_ENV=development
+python app.py
+```
+
+## Licencja
+
+MIT License
+
+## Autor
+
+Guitar AI Team

@@ -21,7 +21,8 @@ from routes.api import (
     descriptions_bp,
     saved_descriptions_bp,
     corrections_bp,
-    learning_data_bp
+    learning_data_bp,
+    examples_bp
 )
 
 def create_app():
@@ -30,6 +31,10 @@ def create_app():
     app.config['SECRET_KEY'] = Config.SECRET_KEY
     app.config['SQLALCHEMY_DATABASE_URI'] = Config.SQLALCHEMY_DATABASE_URI
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = Config.SQLALCHEMY_TRACK_MODIFICATIONS
+    
+    # Set UTF-8 encoding for proper Polish character support
+    app.config['JSON_AS_ASCII'] = False
+    app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
     
     # Initialize database
     init_db(app)
@@ -42,7 +47,18 @@ def create_app():
     @login_manager.user_loader
     def load_user(user_id):
         """Load user by ID"""
-        return get_user_by_id(int(user_id))
+        try:
+            # Ensure user_id is a valid integer
+            if not user_id or not str(user_id).isdigit():
+                return None
+            return get_user_by_id(int(user_id))
+        except (ValueError, TypeError):
+            return None
+    
+    @login_manager.unauthorized_handler
+    def unauthorized():
+        """Handle unauthorized access"""
+        return redirect(url_for('auth.login'))
     
     # Register blueprints
     app.register_blueprint(auth_bp)
@@ -53,6 +69,7 @@ def create_app():
     app.register_blueprint(saved_descriptions_bp)
     app.register_blueprint(corrections_bp)
     app.register_blueprint(learning_data_bp)
+    app.register_blueprint(examples_bp)
     
     return app
 
@@ -63,5 +80,5 @@ if __name__ == '__main__':
     app.run(
         debug=Config.DEBUG,
         host=Config.HOST,
-        port=Config.PORT
+        port=5001
     )

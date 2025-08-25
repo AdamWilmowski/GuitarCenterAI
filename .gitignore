@@ -50,6 +50,7 @@ Thumbs.db
 # Application specific
 learning_data.json
 *.log
+cookies.txt
 
 # Database
 *.db

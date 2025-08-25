@@ -156,3 +156,54 @@ body {
 #examplesList::-webkit-scrollbar-thumb:hover {
     background: #a8a8a8;
 }
+
+/* Tab pane fixes */
+.tab-pane {
+    display: none;
+}
+
+.tab-pane.active {
+    display: block;
+}
+
+.tab-pane.show {
+    display: block;
+}
+
+/* Ensure proper tab content display */
+.tab-content > .tab-pane {
+    display: none;
+}
+
+.tab-content > .active {
+    display: block;
+}
+
+/* Fix for tab content positioning */
+.tab-content {
+    position: relative;
+    min-height: 400px;
+    margin-top: 1rem;
+}
+
+/* Ensure tab panes are properly positioned */
+.tab-pane {
+    position: relative;
+    top: 0;
+    left: 0;
+    right: 0;
+}
+
+/* Fix for any potential overflow issues */
+.container {
+    overflow-x: hidden;
+}
+
+/* Ensure proper spacing between elements */
+.card {
+    margin-bottom: 1rem;
+}
+
+.row {
+    margin-bottom: 1rem;
+}
