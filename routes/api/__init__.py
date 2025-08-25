@@ -4,11 +4,13 @@ from .saved_descriptions import saved_descriptions_bp
 from .corrections import corrections_bp
 from .learning_data import learning_data_bp
 from .examples import examples_bp
+from .prompts import prompts_bp
 
 __all__ = [
     'descriptions_bp',
     'saved_descriptions_bp', 
     'corrections_bp',
     'learning_data_bp',
-    'examples_bp'
+    'examples_bp',
+    'prompts_bp'
 ]

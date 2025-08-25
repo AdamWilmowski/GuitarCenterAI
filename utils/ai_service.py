@@ -1,7 +1,7 @@
 import openai
 from config.settings import Config
 from models.database import db
-from models.descriptions import SavedDescription, ModelCorrection, ModelAdjustment
+from models.descriptions import SavedDescription, ModelCorrection, ModelAdjustment, AIPrompt
 import json
 
 class AIService:
@@ -55,32 +55,62 @@ class AIService:
         
         return context
     
-    def generate_guitar_description(self, input_text):
+    def get_custom_prompt(self, description_type, user_id=None):
+        """Get custom prompt for a specific description type"""
+        try:
+            # Try to get user-specific prompt first
+            if user_id:
+                prompt = AIPrompt.query.filter_by(
+                    user_id=user_id,
+                    prompt_type=description_type,
+                    is_active=True
+                ).first()
+                if prompt:
+                    return prompt.content
+            
+            # Fallback to default prompts
+            return None
+        except Exception:
+            return None
+    
+    def generate_guitar_description(self, input_text, user_id=None):
         """Generate guitar description using AI in Polish"""
         context = self.get_learning_context('guitar')
         
-        # Add Polish examples if no saved descriptions and examples exist
-        if not context:
-            try:
-                # Try to get Polish examples from config
-                if hasattr(Config, 'POLISH_GUITAR_EXAMPLES') and Config.POLISH_GUITAR_EXAMPLES:
-                    context = "\n\nPrzykładowe opisy gitar:\n"
-                    for example in Config.POLISH_GUITAR_EXAMPLES:
-                        context += f"- {example}\n"
-                else:
-                    # Fallback examples if config examples don't exist
-                    context = "\n\nPrzykładowe opisy gitar:\n"
-                    fallback_examples = [
-                        "Fender Stratocaster to ikoniczna gitara elektryczna z charakterystycznym dźwiękiem idealnym do bluesa i rocka.",
-                        "Gibson Les Paul to legenda wśród gitar elektrycznych znana z ciepłego, pełnego brzmienia."
-                    ]
-                    for example in fallback_examples:
-                        context += f"- {example}\n"
-            except Exception:
-                # If all else fails, use minimal context
-                context = "\n\nUżywaj polskiej terminologii muzycznej i technicznej."
+        # Try to get custom prompt first
+        custom_prompt = self.get_custom_prompt('guitar', user_id)
         
-        prompt = f"""Jesteś ekspertem w dziedzinie gitar z głęboką znajomością instrumentów muzycznych. Stwórz szczegółowy, angażujący opis gitary w języku polskim na podstawie poniższych informacji.
+        if custom_prompt:
+            # Use custom prompt with context
+            prompt = f"""{custom_prompt}
+
+{context}
+
+Informacje wejściowe: {input_text}"""
+        else:
+            # Use default prompt
+            # Add Polish examples if no saved descriptions and examples exist
+            if not context:
+                try:
+                    # Try to get Polish examples from config
+                    if hasattr(Config, 'POLISH_GUITAR_EXAMPLES') and Config.POLISH_GUITAR_EXAMPLES:
+                        context = "\n\nPrzykładowe opisy gitar:\n"
+                        for example in Config.POLISH_GUITAR_EXAMPLES:
+                            context += f"- {example}\n"
+                    else:
+                        # Fallback examples if config examples don't exist
+                        context = "\n\nPrzykładowe opisy gitar:\n"
+                        fallback_examples = [
+                            "Fender Stratocaster to ikoniczna gitara elektryczna z charakterystycznym dźwiękiem idealnym do bluesa i rocka.",
+                            "Gibson Les Paul to legenda wśród gitar elektrycznych znana z ciepłego, pełnego brzmienia."
+                        ]
+                        for example in fallback_examples:
+                            context += f"- {example}\n"
+                except Exception:
+                    # If all else fails, use minimal context
+                    context = "\n\nUżywaj polskiej terminologii muzycznej i technicznej."
+            
+            prompt = f"""Jesteś ekspertem w dziedzinie gitar z głęboką znajomością instrumentów muzycznych. Stwórz szczegółowy, angażujący opis gitary w języku polskim na podstawie poniższych informacji.
 
 {context}
 
@@ -97,32 +127,44 @@ Opis powinien być informacyjny, ale dostępny zarówno dla początkujących, ja
         
         return self._call_openai(prompt)
     
-    def generate_company_description(self, input_text):
+    def generate_company_description(self, input_text, user_id=None):
         """Generate company description using AI in Polish"""
         context = self.get_learning_context('company')
         
-        # Add Polish examples if no saved descriptions and examples exist
-        if not context:
-            try:
-                # Try to get Polish examples from config
-                if hasattr(Config, 'POLISH_COMPANY_EXAMPLES') and Config.POLISH_COMPANY_EXAMPLES:
-                    context = "\n\nPrzykładowe opisy firm:\n"
-                    for example in Config.POLISH_COMPANY_EXAMPLES:
-                        context += f"- {example}\n"
-                else:
-                    # Fallback examples if config examples don't exist
-                    context = "\n\nPrzykładowe opisy firm:\n"
-                    fallback_examples = [
-                        "Fender to amerykański producent gitar elektrycznych znany z innowacyjnych rozwiązań.",
-                        "Gibson to legenda wśród producentów gitar premium z długą tradycją."
-                    ]
-                    for example in fallback_examples:
-                        context += f"- {example}\n"
-            except Exception:
-                # If all else fails, use minimal context
-                context = "\n\nUżywaj polskiej terminologii biznesowej i muzycznej."
+        # Try to get custom prompt first
+        custom_prompt = self.get_custom_prompt('company', user_id)
         
-        prompt = f"""Jesteś ekspertem w dziedzinie produkcji gitar i historii firm muzycznych. Stwórz szczegółowy opis firmy produkującej gitary w języku polskim na podstawie poniższych informacji.
+        if custom_prompt:
+            # Use custom prompt with context
+            prompt = f"""{custom_prompt}
+
+{context}
+
+Informacje wejściowe: {input_text}"""
+        else:
+            # Use default prompt
+            # Add Polish examples if no saved descriptions and examples exist
+            if not context:
+                try:
+                    # Try to get Polish examples from config
+                    if hasattr(Config, 'POLISH_COMPANY_EXAMPLES') and Config.POLISH_COMPANY_EXAMPLES:
+                        context = "\n\nPrzykładowe opisy firm:\n"
+                        for example in Config.POLISH_COMPANY_EXAMPLES:
+                            context += f"- {example}\n"
+                    else:
+                        # Fallback examples if config examples don't exist
+                        context = "\n\nPrzykładowe opisy firm:\n"
+                        fallback_examples = [
+                            "Fender to amerykański producent gitar elektrycznych znany z innowacyjnych rozwiązań.",
+                            "Gibson to legenda wśród producentów gitar premium z długą tradycją."
+                        ]
+                        for example in fallback_examples:
+                            context += f"- {example}\n"
+                except Exception:
+                    # If all else fails, use minimal context
+                    context = "\n\nUżywaj polskiej terminologii biznesowej i muzycznej."
+            
+            prompt = f"""Jesteś ekspertem w dziedzinie produkcji gitar i historii firm muzycznych. Stwórz szczegółowy opis firmy produkującej gitary w języku polskim na podstawie poniższych informacji.
 
 {context}
 

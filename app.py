@@ -22,7 +22,8 @@ from routes.api import (
     saved_descriptions_bp,
     corrections_bp,
     learning_data_bp,
-    examples_bp
+    examples_bp,
+    prompts_bp
 )
 
 def create_app():
@@ -70,6 +71,7 @@ def create_app():
     app.register_blueprint(corrections_bp)
     app.register_blueprint(learning_data_bp)
     app.register_blueprint(examples_bp)
+    app.register_blueprint(prompts_bp)
     
     return app
 

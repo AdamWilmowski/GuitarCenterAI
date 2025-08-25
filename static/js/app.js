@@ -23,12 +23,26 @@ document.addEventListener('DOMContentLoaded', function() {
         loadExamples();
     });
     
+    // Load prompts when prompts tab is shown
+    document.getElementById('prompts-tab').addEventListener('click', function() {
+        loadPrompts();
+    });
+    
     // Add example form submission
     const addExampleForm = document.getElementById('addExampleForm');
     if (addExampleForm) {
         addExampleForm.addEventListener('submit', function(event) {
             event.preventDefault();
             addExample();
+        });
+    }
+    
+    // Add prompt form submission
+    const addPromptForm = document.getElementById('addPromptForm');
+    if (addPromptForm) {
+        addPromptForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            addPrompt();
         });
     }
     
@@ -462,5 +476,299 @@ function showLoading(show) {
     const spinner = document.getElementById('loadingSpinner');
     if (spinner) {
         spinner.style.display = show ? 'block' : 'none';
+    }
+}
+
+// Load prompts function
+function loadPrompts() {
+    fetch('/api/prompts/list')
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            displayPrompts(data.prompts);
+        } else {
+            console.error('Błąd podczas ładowania promptów:', data.error);
+            showPromptMessage('Błąd podczas ładowania promptów: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Błąd podczas ładowania promptów:', error);
+        showPromptMessage('Błąd podczas ładowania promptów: ' + error.message, 'danger');
+    });
+}
+
+// Display prompts function
+function displayPrompts(prompts) {
+    const container = document.getElementById('promptsList');
+    if (!container) return;
+    
+    if (!prompts || prompts.length === 0) {
+        container.innerHTML = '<p class="text-muted">Brak promptów...</p>';
+        return;
+    }
+    
+    let html = '';
+    prompts.forEach(prompt => {
+        const activeBadge = prompt.is_active ? 
+            '<span class="badge bg-success ms-2">Aktywny</span>' : 
+            '<span class="badge bg-secondary ms-2">Nieaktywny</span>';
+        
+        html += `
+            <div class="border-bottom pb-3 mb-3" 
+                 data-prompt-id="${prompt.id}"
+                 data-prompt-type="${prompt.prompt_type}"
+                 data-prompt-title="${prompt.title.replace(/"/g, '&quot;')}"
+                 data-prompt-content="${prompt.content.replace(/"/g, '&quot;')}"
+                 data-prompt-active="${prompt.is_active}">
+                <div class="d-flex justify-content-between align-items-start">
+                    <h6 class="mb-1">${prompt.title} ${activeBadge}</h6>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary btn-sm" onclick="editPrompt(${prompt.id})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-outline-success btn-sm" onclick="activatePrompt(${prompt.id})" ${prompt.is_active ? 'disabled' : ''}>
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" onclick="deletePrompt(${prompt.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <small class="text-muted">Typ: ${prompt.prompt_type} | Wersja: ${prompt.version} | ${new Date(prompt.created_at).toLocaleString('pl-PL')}</small>
+                <div class="mt-2">
+                    <strong>Treść:</strong>
+                    <div class="border rounded p-2 bg-light mt-1" style="max-height: 100px; overflow-y: auto; font-size: 0.9em;">
+                        ${prompt.content.substring(0, 200)}${prompt.content.length > 200 ? '...' : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    container.innerHTML = html;
+}
+
+// Add prompt function
+function addPrompt() {
+    const type = document.getElementById('promptType').value;
+    const title = document.getElementById('promptTitle').value;
+    const content = document.getElementById('promptContent').value;
+    const isActive = document.getElementById('promptActive').checked;
+
+    if (!content.trim() || !title.trim()) {
+        showPromptMessage('Proszę wypełnić wszystkie wymagane pola.', 'danger');
+        return;
+    }
+
+    showLoading(true);
+
+    fetch('/api/prompts/add', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            prompt_type: type,
+            title: title,
+            content: content,
+            is_active: isActive
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        showLoading(false);
+        if (data.success) {
+            showPromptMessage('Prompt został dodany pomyślnie!', 'success');
+            resetPromptForm();
+            loadPrompts(); // Refresh prompts list
+        } else {
+            showPromptMessage('Błąd: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        showLoading(false);
+        console.error('Error adding prompt:', error);
+        showPromptMessage('Błąd: ' + error.message, 'danger');
+    });
+}
+
+// Edit prompt function
+function editPrompt(promptId) {
+    // Find the prompt data from the current prompts list
+    const promptElement = document.querySelector(`[data-prompt-id="${promptId}"]`);
+    if (!promptElement) {
+        showPromptMessage('Nie można znaleźć danych promptu', 'danger');
+        return;
+    }
+    
+    // Get prompt data from data attributes
+    const promptType = promptElement.getAttribute('data-prompt-type');
+    const promptTitle = promptElement.getAttribute('data-prompt-title');
+    const promptContent = promptElement.getAttribute('data-prompt-content');
+    const isActive = promptElement.getAttribute('data-prompt-active') === 'true';
+    
+    // Populate the edit modal
+    document.getElementById('editPromptId').value = promptId;
+    document.getElementById('editPromptType').value = promptType;
+    document.getElementById('editPromptTitle').value = promptTitle;
+    document.getElementById('editPromptContent').value = promptContent;
+    document.getElementById('editPromptActive').checked = isActive;
+    
+    // Show the modal
+    const editModal = new bootstrap.Modal(document.getElementById('editPromptModal'));
+    editModal.show();
+}
+
+// Update prompt function
+function updatePrompt() {
+    const promptId = document.getElementById('editPromptId').value;
+    const promptType = document.getElementById('editPromptType').value;
+    const promptTitle = document.getElementById('editPromptTitle').value;
+    const promptContent = document.getElementById('editPromptContent').value;
+    const isActive = document.getElementById('editPromptActive').checked;
+
+    if (!promptContent.trim() || !promptTitle.trim()) {
+        showPromptMessage('Proszę wypełnić wszystkie wymagane pola.', 'danger');
+        return;
+    }
+
+    showLoading(true);
+
+    fetch(`/api/prompts/${promptId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            title: promptTitle,
+            content: promptContent,
+            is_active: isActive
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        showLoading(false);
+        if (data.success) {
+            showPromptMessage('Prompt został zaktualizowany pomyślnie!', 'success');
+            
+            // Hide the modal
+            const editModal = bootstrap.Modal.getInstance(document.getElementById('editPromptModal'));
+            editModal.hide();
+            
+            loadPrompts(); // Refresh prompts list
+        } else {
+            showPromptMessage('Błąd: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        showLoading(false);
+        console.error('Error updating prompt:', error);
+        showPromptMessage('Błąd: ' + error.message, 'danger');
+    });
+}
+
+// Activate prompt function
+function activatePrompt(promptId) {
+    fetch(`/api/prompts/activate/${promptId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showPromptMessage('Prompt został aktywowany pomyślnie!', 'success');
+            loadPrompts(); // Refresh prompts list
+        } else {
+            showPromptMessage('Błąd: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error activating prompt:', error);
+        showPromptMessage('Błąd: ' + error.message, 'danger');
+    });
+}
+
+// Delete prompt function
+function deletePrompt(promptId) {
+    if (!confirm('Czy na pewno chcesz usunąć ten prompt?')) {
+        return;
+    }
+    
+    fetch(`/api/prompts/${promptId}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showPromptMessage('Prompt został usunięty pomyślnie!', 'success');
+            loadPrompts(); // Refresh prompts list
+        } else {
+            showPromptMessage('Błąd: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error deleting prompt:', error);
+        showPromptMessage('Błąd: ' + error.message, 'danger');
+    });
+}
+
+// Show prompt message function
+function showPromptMessage(message, type) {
+    const messageDiv = document.getElementById('promptMessage');
+    if (!messageDiv) return;
+    
+    messageDiv.textContent = message;
+    messageDiv.className = `alert alert-${type}`;
+    messageDiv.style.display = 'block';
+    
+    // Auto-hide success messages after 3 seconds
+    if (type === 'success') {
+        setTimeout(() => {
+            messageDiv.style.display = 'none';
+        }, 3000);
+    }
+}
+
+// Reset prompt form function
+function resetPromptForm() {
+    const form = document.getElementById('addPromptForm');
+    if (form) {
+        form.reset();
+    }
+    
+    const messageDiv = document.getElementById('promptMessage');
+    if (messageDiv) {
+        messageDiv.style.display = 'none';
+        messageDiv.classList.remove('alert-success', 'alert-danger');
+        messageDiv.textContent = '';
     }
 }

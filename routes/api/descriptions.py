@@ -26,9 +26,9 @@ def generate_description():
         start_time = time.time()
         
         if description_type == 'guitar':
-            result = ai_service.generate_guitar_description(input_text)
+            result = ai_service.generate_guitar_description(input_text, current_user.id)
         else:
-            result = ai_service.generate_company_description(input_text)
+            result = ai_service.generate_company_description(input_text, current_user.id)
         
         processing_time = time.time() - start_time
         

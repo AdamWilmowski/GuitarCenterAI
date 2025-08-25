@@ -79,3 +79,21 @@ class ModelAdjustment(db.Model):
     def __repr__(self):
         return f'<ModelAdjustment {self.adjustment_type}:{self.adjustment_key}>'
 
+class AIPrompt(db.Model):
+    """Model for storing AI prompts"""
+    
+    __tablename__ = 'ai_prompts'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    prompt_type = db.Column(db.String(20), nullable=False)  # 'guitar' or 'company'
+    title = db.Column(db.String(200), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    version = db.Column(db.Integer, default=1)
+    
+    def __repr__(self):
+        return f'<AIPrompt {self.prompt_type}:{self.title}>'
+
