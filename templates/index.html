@@ -336,6 +336,55 @@
     </div>
 </div>
 
+<!-- Save Description Modal -->
+<div class="modal fade" id="saveDescriptionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-save me-2"></i>Zapisz Opis
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="saveDescriptionForm">
+                    <div class="mb-3">
+                        <label for="saveTitle" class="form-label">Tytuł:</label>
+                        <input type="text" class="form-control" id="saveTitle" required 
+                               placeholder="np. Fender Stratocaster, Gibson Les Paul...">
+                    </div>
+                    <div class="mb-3">
+                        <label for="saveCategory" class="form-label">Kategoria:</label>
+                        <input type="text" class="form-control" id="saveCategory" required 
+                               placeholder="np. Elektryczna, Akustyczna, Firma...">
+                        <small class="form-text text-muted" id="categorySuggestion"></small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="saveTags" class="form-label">Tagi (oddzielone przecinkami):</label>
+                        <input type="text" class="form-control" id="saveTags" 
+                               placeholder="np. rock, blues, vintage, premium...">
+                        <small class="form-text text-muted" id="tagsSuggestion"></small>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="saveIsPublic" checked>
+                            <label class="form-check-label" for="saveIsPublic">
+                                Opis publiczny (będzie używany jako przykład dla innych użytkowników)
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                <button type="button" class="btn btn-primary" onclick="submitSaveDescription()">
+                    <i class="fas fa-save me-2"></i>Zapisz Opis
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Edit Prompt Modal -->
 <div class="modal fade" id="editPromptModal" tabindex="-1" aria-labelledby="editPromptModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">

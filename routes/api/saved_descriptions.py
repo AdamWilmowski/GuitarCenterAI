@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from models.database import db
 from models.descriptions import SavedDescription
+from utils.ai_service import AIService
 import json
 
 saved_descriptions_bp = Blueprint('saved_descriptions', __name__, url_prefix='/api/saved-descriptions')
@@ -103,6 +104,32 @@ def delete_saved_description(description_id):
             'success': True,
             'message': 'Description deleted successfully'
         })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@saved_descriptions_bp.route('/suggest-metadata', methods=['POST'])
+@login_required
+def suggest_metadata():
+    """Suggest category and tags for a description"""
+    try:
+        data = request.get_json()
+        content = data.get('content')
+        description_type = data.get('type')
+        
+        if not content or not description_type:
+            return jsonify({
+                'success': False,
+                'error': 'Missing required fields: content and type'
+            }), 400
+        
+        ai_service = AIService()
+        result = ai_service.suggest_metadata(content, description_type)
+        
+        return jsonify(result)
         
     except Exception as e:
         return jsonify({

@@ -1,6 +1,8 @@
 let currentType = '';
 let currentOriginalText = '';
 let currentDescriptionId = null;
+let currentSaveType = '';
+let currentSaveText = '';
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
@@ -252,7 +254,7 @@ function generateDescription(type) {
 }
 
 // Save description function
-function saveDescription(type) {
+async function saveDescription(type) {
     const outputElement = document.getElementById(type + 'Output');
     if (!outputElement) {
         console.error('Output element not found for type:', type);
@@ -263,44 +265,111 @@ function saveDescription(type) {
     console.log('Saving description, length:', text.length);
     console.log('Full text to save:', text);
     
-    const title = prompt('Podaj tytuł dla tego opisu:');
-    if (!title) return;
+    // Store the current type and text for the modal
+    currentSaveType = type;
+    currentSaveText = text;
     
-    const category = prompt('Podaj kategorię (np. "Elektryczna", "Akustyczna", "Firma"):');
-    if (!category) return;
+    // Try to get AI suggestions for category and tags
+    let suggestedCategory = '';
+    let suggestedTags = '';
     
-    const tags = prompt('Podaj tagi oddzielone przecinkami (opcjonalnie):');
+    try {
+        const response = await fetch('/api/saved-descriptions/suggest-metadata', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                content: text,
+                type: type
+            })
+        });
+        const data = await response.json();
+        if (data.success) {
+            suggestedCategory = data.category;
+            suggestedTags = data.tags;
+        }
+    } catch (error) {
+        console.log('Could not get metadata suggestions:', error);
+    }
     
-    fetch('/api/saved-descriptions/save', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            type: type,
-            content: text,
-            title: title,
-            category: category,
-            tags: tags || ''
-        })
-    })
-    .then(response => {
+    // Populate the modal with suggestions
+    document.getElementById('saveTitle').value = '';
+    document.getElementById('saveCategory').value = suggestedCategory || '';
+    document.getElementById('saveTags').value = suggestedTags || '';
+    
+    // Show suggestion hints
+    const categorySuggestion = document.getElementById('categorySuggestion');
+    const tagsSuggestion = document.getElementById('tagsSuggestion');
+    
+    if (suggestedCategory) {
+        categorySuggestion.textContent = `Sugerowana kategoria: ${suggestedCategory}`;
+        categorySuggestion.className = 'form-text text-success';
+    } else {
+        categorySuggestion.textContent = 'Wprowadź kategorię (np. Elektryczna, Akustyczna, Firma)';
+        categorySuggestion.className = 'form-text text-muted';
+    }
+    
+    if (suggestedTags) {
+        tagsSuggestion.textContent = `Sugerowane tagi: ${suggestedTags}`;
+        tagsSuggestion.className = 'form-text text-success';
+    } else {
+        tagsSuggestion.textContent = 'Wprowadź tagi oddzielone przecinkami (opcjonalnie)';
+        tagsSuggestion.className = 'form-text text-muted';
+    }
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('saveDescriptionModal'));
+    modal.show();
+}
+
+// Submit save description function
+async function submitSaveDescription() {
+    const title = document.getElementById('saveTitle').value.trim();
+    const category = document.getElementById('saveCategory').value.trim();
+    const tags = document.getElementById('saveTags').value.trim();
+    const isPublic = document.getElementById('saveIsPublic').checked;
+    
+    if (!title || !category) {
+        alert('Proszę wypełnić tytuł i kategorię.');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/saved-descriptions/save', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                type: currentSaveType,
+                content: currentSaveText,
+                title: title,
+                category: category,
+                tags: tags || '',
+                is_public: isPublic
+            })
+        });
+        
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        return response.json();
-    })
-    .then(data => {
+        
+        const data = await response.json();
         if (data.success) {
-            alert('Opis został zapisany pomyślnie!');
+            // Hide the modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('saveDescriptionModal'));
+            modal.hide();
+            
+            // Show success message
+            showMessage('Opis został zapisany pomyślnie!', 'success');
         } else {
-            alert('Błąd: ' + data.error);
+            showMessage('Błąd: ' + data.error, 'danger');
         }
-    })
-    .catch(error => {
+    } catch (error) {
         console.error('Error saving description:', error);
-        alert('Błąd: ' + error.message);
-    });
+        showMessage('Błąd: ' + error.message, 'danger');
+    }
 }
 
 // Enable correction function
@@ -349,9 +418,10 @@ function submitCorrection() {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            original: currentOriginalText,
-            corrected: correctedText,
-            type: currentType
+            original_text: currentOriginalText,
+            corrected_text: correctedText,
+            type: currentType,
+            description_id: currentDescriptionId
         })
     })
     .then(response => {
@@ -477,6 +547,28 @@ function showLoading(show) {
     if (spinner) {
         spinner.style.display = show ? 'block' : 'none';
     }
+}
+
+// Show message function
+function showMessage(message, type = 'info') {
+    // Create a temporary alert element
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    // Add to body
+    document.body.appendChild(alertDiv);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
 }
 
 // Load prompts function
